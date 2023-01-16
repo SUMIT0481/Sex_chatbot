@@ -4,22 +4,14 @@ from pyrogram import *
 
 from config import Config
 from pyrogram.types import *
-from googletrans import Translator
 
 OWNER_USERNAME = Config.OWNER_USERNAME
 BOT_TOKEN = Config.BOT_TOKEN
 BOT_ID = int(BOT_TOKEN.split(":")[0])
 MERISSA_TOKEN = Config.MERISSA_TOKEN
-BOT_NAME = Config.BOT_NAME
-OWNER_NAME = Config.OWNER_NAME
-LANG = Config.LANGUAGE_CODE
-
-chatbot_group = 2
 
 bot = Client("MerissaChatbot", bot_token=BOT_TOKEN, api_id=6,
              api_hash="eb06d4abfb49dc3eeb1aeb98ae0f581e")
-
-tr = Translator()
 
 @bot.on_message(filters.command("start") & ~filters.edited)
 async def start(client, message):
@@ -30,45 +22,71 @@ async def start(client, message):
                                         InlineKeyboardButton(
                                             "Dev", url=f"https://t.me/{OWNER_USERNAME}"),
                                         InlineKeyboardButton(
-                                            "Repo", url="https://github.com/Prince-Botz/Merissa-Chatbot")
+                                            "Repo", url="https://github.com/MaybePrince/Merissa-Chatbot/tree/Sax-ChatBot")
                                     ]]
                             ),               
            )
    else:
        await message.reply("**I'm alive, check my pm to know more about me!**")
 
-@bot.on_message(
-    filters.text
-    & filters.reply
-    & ~filters.bot
-    & ~filters.via_bot
-    & ~filters.forwarded
-    & ~filters.edited,
-    group=chatbot_group,  
-)
-async def chatbot_talk(_, message: Message):
-    chat = message.chat.id
-    if not message.reply_to_message:
-        return
-    if not message.reply_to_message.from_user:
-        return
-    if message.reply_to_message.from_user.id != BOT_ID:
-        return
-    if message.text[0] == "/":
-        return
-    if chat:
-        await bot.send_chat_action(message.chat.id, "typing")
-        lang = tr.translate(message.text).src
-        trtoen = (
-            message.text if lang == "en" else tr.translate(message.text, dest="en").text
-        ).replace(" ", "%20")
-        text = trtoen.replace(" ", "%20") if len(message.text) < 2 else trtoen
-        merissaurl = requests.get(
-            f"https://merissachatbot.tk/api/apikey={MERISSA_TOKEN}/{BOT_NAME}/{OWNER_NAME}/message={text}"
-        )
-        textmsg = merissaurl.json()["reply"]
-        msg = tr.translate(textmsg, src="en", dest=LANG)
-        await message.reply_text(msg.text)
+async def type_and_send(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id if message.from_user else 0
+    query = message.text.strip()
+    await message._client.send_chat_action(chat_id, "typing")
+    response = requests.get(f"https://api.princexd.tech/chatbot?text={query}").json()["message"]
+    await message.reply_text(response)
+    await message._client.send_chat_action(chat_id, "cancel")
 
-print("Merissa Chatbot Started!")
+
+@luna.on_message(filters.command("repo") & ~filters.edited)
+async def repo(_, message):
+    await message.reply_text(
+        "[GitHub](https://github.com/MaybePrince/Merissa-Chatbot/tree/Sax-ChatBot)"
+        + " | [Group](t.me/MerissaxSupport)",
+        disable_web_page_preview=True,
+    )
+
+
+@luna.on_message(filters.command("help") & ~filters.edited)
+async def start(_, message):
+    await luna.send_chat_action(message.chat.id, "typing")
+    await sleep(2)
+    await message.reply_text("/repo - Get Repo Link")
+
+
+@luna.on_message(
+    ~filters.private
+    & filters.text
+    & ~filters.command("help")
+    & ~filters.edited,
+    group=69,
+)
+async def chat(_, message):
+    if message.reply_to_message:
+        if not message.reply_to_message.from_user:
+            return
+        from_user_id = message.reply_to_message.from_user.id
+        if from_user_id != bot_id:
+            return
+    else:
+        match = re.search(
+            "[.|\n]{0,}luna[.|\n]{0,}",
+            message.text.strip(),
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            return
+    await type_and_send(message)
+
+
+@luna.on_message(
+    filters.private & ~filters.command("help") & ~filters.edited
+)
+async def chatpm(_, message):
+    if not message.text:
+        return
+    await type_and_send(message) 
+
+print("Merissa Sex-Chatbot Started!")
 bot.run()
